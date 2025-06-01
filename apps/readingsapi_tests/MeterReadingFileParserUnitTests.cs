@@ -51,9 +51,11 @@ public class MeterReadingFileParserUnitTests
     [Fact]
     public async Task ParseMultipleRecords()
     {
-        // Given a file with one record        
-        var readingsData = "2344,22/04/2019 09:24,1002,";
-        readingsData += "\n2233,22/04/2019 12:25,323,";
+        // Given a file with one record      
+        var csvDataBuilder = new StringBuilder();  
+        csvDataBuilder.AppendLine("2344,22/04/2019 09:24,1002,");
+        csvDataBuilder.AppendLine("2233,22/04/2019 12:25,323,");
+        var readingsData = csvDataBuilder.ToString();
         var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(readingsData));
         var file = new FormFile(contentStream, 0, contentStream.Length, "name", "empty.txt");
 

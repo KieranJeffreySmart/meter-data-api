@@ -7,7 +7,7 @@ using readingsapi;
 
 namespace readingsapi_tests;
 
-public class EndToEndTests : IClassFixture<WebApplicationFactory<Program>>
+public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Program>>
 {
     // As an Energy Company Account Manager, 
     // I want to be able to load a CSV file of Customer Meter Readings 
@@ -29,7 +29,7 @@ public class EndToEndTests : IClassFixture<WebApplicationFactory<Program>>
     // When an account has an existing read, ensure the new read isn’t older than the existing read
 
     WebApplicationFactory<Program> _factory;
-    public EndToEndTests(WebApplicationFactory<Program> factory)
+    public EndToEndValidDataTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }
@@ -71,7 +71,7 @@ public class EndToEndTests : IClassFixture<WebApplicationFactory<Program>>
         // Then I should be informed my request was bad
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var responseData = await response.Content.ReadAsStringAsync();
-        Assert.Contains("\"Bad Request: Invalid data provided.\"", responseData);
+        Assert.Equal("\"Bad Request: Invalid data provided.\"", responseData);
     }
 
     [Fact]
@@ -90,7 +90,7 @@ public class EndToEndTests : IClassFixture<WebApplicationFactory<Program>>
                     .UseAsyncSeeding(async (context, _, camcellationToken) =>
                     {
                         
-                        (context as MeterReadingsContext)?.Accounts.Add(new Account(1002, "John", "Doe"));
+                        (context as MeterReadingsContext)?.Accounts.Add(new Account(2344, "John", "Doe"));
                         await context.SaveChangesAsync(camcellationToken);
                     });
                 });
@@ -108,7 +108,7 @@ public class EndToEndTests : IClassFixture<WebApplicationFactory<Program>>
         // Then I should be informed the reading was successfully submitted
         response.EnsureSuccessStatusCode();
         var responseData = await response.Content.ReadAsStringAsync();
-        Assert.Contains("1", responseData);
+        Assert.Equal("\"1\"", responseData);
 
         // And I can see the reading was persisted
         Assert.NotNull(localDbName);
@@ -124,11 +124,74 @@ public class EndToEndTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Equal(1002, reading.MeterReadValue);
     }
     
+    
+
+    [Fact]
+    public async Task SubmitMultipleUnorderedValidReadingForSingleCustomer()
+    {
+        // Given I have a customer account
+        string localDbName = string.Empty;
+        var localWebFactory = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(s =>
+            {
+                s.AddDbContext<MeterReadingsContext>(options =>
+                {
+                    localDbName = "TestDB_" + Guid.NewGuid().ToString();
+                    options.UseInMemoryDatabase(localDbName)
+                    .UseAsyncSeeding(async (context, _, camcellationToken) =>
+                    {
+                        
+                        (context as MeterReadingsContext)?.Accounts.Add(new Account(2344, "John", "Doe"));
+                        await context.SaveChangesAsync(camcellationToken);
+                    });
+                });
+            });
+        });
+
+        // And I have a single entry of meter reading data
+        var csvDataBuilder = new StringBuilder();
+        csvDataBuilder.AppendLine("2344,22/04/2019 09:24,1002,");
+        csvDataBuilder.AppendLine("2344,22/04/2019 12:25,1004,");
+        csvDataBuilder.AppendLine("2344,08/04/2019 09:24,0000,");
+        var readingsData = csvDataBuilder.ToString();
+
+        // When I submit the data
+        var client = localWebFactory.CreateClient();
+        var content = CreateFakeMultiPartFormData(readingsData);
+        var response = await client.PostAsync("/meter-reading-uploads", content);
+
+        // Then I should be informed the reading was successfully submitted
+        response.EnsureSuccessStatusCode();
+        var responseData = await response.Content.ReadAsStringAsync();
+        Assert.Equal("\"3\"", responseData);
+
+        // And I can see the reading was persisted
+        Assert.NotNull(localDbName);
+        Assert.NotEqual(string.Empty, localDbName);
+        var localContext = new MeterReadingsContext(
+            new DbContextOptionsBuilder<MeterReadingsContext>()
+                .UseInMemoryDatabase(localDbName)
+                .Options);
+        Assert.Equal(3, localContext.Readings.Count());
+        var readings = localContext.Readings.OrderBy(r => r.MeterReadingDateTime).ToList();
+        AssertMeterReading(readings[0], 2344, new DateTime(2019, 4, 8, 9, 24, 0), 0);
+        AssertMeterReading(readings[1], 2344, new DateTime(2019, 4, 22, 9, 24, 0), 1002);
+        AssertMeterReading(readings[2], 2344, new DateTime(2019, 4, 22, 12, 25, 0), 1004);
+    }
+
+    private static void AssertMeterReading(MeterReading actual, int accountId, DateTime meterReadingDateTime, int meterReadValue)
+    {
+        Assert.Equal(accountId, actual.AccountId);
+        Assert.Equal(meterReadingDateTime, actual.MeterReadingDateTime);
+        Assert.Equal(meterReadValue, actual.MeterReadValue);
+    }
+    
     private static MultipartFormDataContent CreateFakeMultiPartFormData(string content)
     {
         ByteArrayContent byteContent = new ByteArrayContent(Encoding.UTF8.GetBytes(content));
 
-        MultipartFormDataContent multipartContent = new MultipartFormDataContent { {byteContent, "file", "readings.csv"} };
+        MultipartFormDataContent multipartContent = new MultipartFormDataContent { { byteContent, "file", "readings.csv" } };
         return multipartContent;
     }
 }

@@ -34,6 +34,7 @@ public class Program
         _ = app.MapPost("/meter-reading-uploads", async (HttpRequest request, [FromServices] MeterReadingsContext dbContext, [FromServices] MeterReadingsFileParser fileParser) =>
         {
             await dbContext.Database.EnsureCreatedAsync();
+            var recordCount = 0;
 
             try
             {
@@ -46,12 +47,13 @@ public class Program
 
                 foreach (var file in formCollection.Files)
                 {
-                    await foreach(var reading in fileParser.ParseAsync(file))
+                    await foreach (var reading in fileParser.ParseAsync(file))
                     {
                         dbContext.Readings.Add(reading);
+                        recordCount++;
                     }
                 }
-                
+
                 await dbContext.SaveChangesAsync();
             }
             catch (InvalidDataException _)
@@ -59,7 +61,7 @@ public class Program
                 return Results.BadRequest("Bad Request: Invalid data provided.");
             }
 
-            return Results.Ok("1");
+            return Results.Ok(recordCount.ToString());
         })
         .WithName("MeterReadingUploads");
 
