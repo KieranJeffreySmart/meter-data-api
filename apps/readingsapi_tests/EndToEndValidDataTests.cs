@@ -102,7 +102,7 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
 
         // When I submit the data
         var client = localWebFactory.CreateClient();
-        var content = CreateFakeMultiPartFormData(readingsData);
+        var content = TestHelpers.CreateFakeMultiPartFormData(readingsData);
         var response = await client.PostAsync("/meter-reading-uploads", content);
 
         // Then I should be informed the reading was successfully submitted
@@ -113,15 +113,10 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
         // And I can see the reading was persisted
         Assert.NotNull(localDbName);
         Assert.NotEqual(string.Empty, localDbName);
-        var localContext = new MeterReadingsContext(
-            new DbContextOptionsBuilder<MeterReadingsContext>()
-                .UseInMemoryDatabase(localDbName)
-                .Options);
-        Assert.Equal(1, localContext.Readings.Count());
-        var reading = localContext.Readings.First();
-        Assert.Equal(2344, reading.AccountId);
-        Assert.Equal(new DateTime(2019, 4, 22, 9, 24, 0), reading.MeterReadingDateTime);
-        Assert.Equal(1002, reading.MeterReadValue);
+        var readings = TestHelpers.GetReadingsFromContext(localDbName).ToList();
+        Assert.Single(readings);
+        var reading = readings.First();
+        TestHelpers.AssertMeterReading(reading, 2344, new DateTime(2019, 4, 22, 9, 24, 0), 1002);
     }
     
     
@@ -158,7 +153,7 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
 
         // When I submit the data
         var client = localWebFactory.CreateClient();
-        var content = CreateFakeMultiPartFormData(readingsData);
+        var content = TestHelpers.CreateFakeMultiPartFormData(readingsData);
         var response = await client.PostAsync("/meter-reading-uploads", content);
 
         // Then I should be informed the reading was successfully submitted
@@ -169,29 +164,10 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
         // And I can see the reading was persisted
         Assert.NotNull(localDbName);
         Assert.NotEqual(string.Empty, localDbName);
-        var localContext = new MeterReadingsContext(
-            new DbContextOptionsBuilder<MeterReadingsContext>()
-                .UseInMemoryDatabase(localDbName)
-                .Options);
-        Assert.Equal(3, localContext.Readings.Count());
-        var readings = localContext.Readings.OrderBy(r => r.MeterReadingDateTime).ToList();
-        AssertMeterReading(readings[0], 2344, new DateTime(2019, 4, 8, 9, 24, 0), 0);
-        AssertMeterReading(readings[1], 2344, new DateTime(2019, 4, 22, 9, 24, 0), 1002);
-        AssertMeterReading(readings[2], 2344, new DateTime(2019, 4, 22, 12, 25, 0), 1004);
-    }
-
-    private static void AssertMeterReading(MeterReading actual, int accountId, DateTime meterReadingDateTime, int meterReadValue)
-    {
-        Assert.Equal(accountId, actual.AccountId);
-        Assert.Equal(meterReadingDateTime, actual.MeterReadingDateTime);
-        Assert.Equal(meterReadValue, actual.MeterReadValue);
-    }
-    
-    private static MultipartFormDataContent CreateFakeMultiPartFormData(string content)
-    {
-        ByteArrayContent byteContent = new ByteArrayContent(Encoding.UTF8.GetBytes(content));
-
-        MultipartFormDataContent multipartContent = new MultipartFormDataContent { { byteContent, "file", "readings.csv" } };
-        return multipartContent;
+        var readings = TestHelpers.GetReadingsFromContext(localDbName).ToList();
+        Assert.Equal(3, readings.Count);
+        TestHelpers.AssertMeterReading(readings[0], 2344, new DateTime(2019, 4, 8, 9, 24, 0), 0);
+        TestHelpers.AssertMeterReading(readings[1], 2344, new DateTime(2019, 4, 22, 9, 24, 0), 1002);
+        TestHelpers.AssertMeterReading(readings[2], 2344, new DateTime(2019, 4, 22, 12, 25, 0), 1004);
     }
 }

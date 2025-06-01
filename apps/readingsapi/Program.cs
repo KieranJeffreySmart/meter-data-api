@@ -56,8 +56,9 @@ public class Program
 
                 await dbContext.SaveChangesAsync();
             }
-            catch (InvalidDataException _)
+            catch (InvalidDataException ex)
             {
+                Console.WriteLine($"Invalid data encountered: {ex.Message}");
                 return Results.BadRequest("Bad Request: Invalid data provided.");
             }
 
