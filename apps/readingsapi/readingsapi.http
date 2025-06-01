@@ -1,6 +1,6 @@
 @readingsapi_HostAddress = http://localhost:5084
 
-GET {{readingsapi_HostAddress}}/weatherforecast/
-Accept: application/json
+POST {{readingsapi_HostAddress}}/meter-reading-uploads/
+Accept: text/csv
 
 ###
