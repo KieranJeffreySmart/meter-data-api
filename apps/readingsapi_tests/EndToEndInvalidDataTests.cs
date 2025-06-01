@@ -1,8 +1,5 @@
-using System.Net;
 using System.Text;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using readingsapi;
 
 namespace readingsapi_tests;
@@ -31,24 +28,8 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
     public async Task SubmitInvalidMeterReadValueForSingleCustomer(string meterReadingValue)
     {
         // Given I have a customer account
-        string localDbName = string.Empty;
-        var localWebFactory = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(s =>
-            {
-                s.AddDbContext<MeterReadingsContext>(options =>
-                {
-                    localDbName = "TestDB_" + Guid.NewGuid().ToString();
-                    options.UseInMemoryDatabase(localDbName)
-                    .UseAsyncSeeding(async (context, _, camcellationToken) =>
-                    {
-
-                        (context as MeterReadingsContext)?.Accounts.Add(new Account(2344, "John", "Doe"));
-                        await context.SaveChangesAsync(camcellationToken);
-                    });
-                });
-            });
-        });
+        string localDbName = "TestDB_" + Guid.NewGuid().ToString();
+        var localWebFactory = TestHelpers.CreateSeededWebFactory(_factory, [new Account(2344, "John", "Doe")], localDbName);
 
         // And I have a single entry of meter reading data
         var csvDataBuilder = new StringBuilder();
@@ -76,8 +57,6 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
         TestHelpers.AssertMeterReading(readings[1], 2344, new DateTime(2019, 4, 22, 9, 24, 0), 1002);
     }
 
-
-
     [Theory]
     [InlineData("1")]
     [InlineData("41/11/1999 12:00")]
@@ -85,24 +64,8 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
     public async Task SubmitInvalidMeterReadingDateTimeForSingleCustomer(string meterReadingDateTime)
     {
         // Given I have a customer account
-        string localDbName = string.Empty;
-        var localWebFactory = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(s =>
-            {
-                s.AddDbContext<MeterReadingsContext>(options =>
-                {
-                    localDbName = "TestDB_" + Guid.NewGuid().ToString();
-                    options.UseInMemoryDatabase(localDbName)
-                    .UseAsyncSeeding(async (context, _, camcellationToken) =>
-                    {
-
-                        (context as MeterReadingsContext)?.Accounts.Add(new Account(2344, "John", "Doe"));
-                        await context.SaveChangesAsync(camcellationToken);
-                    });
-                });
-            });
-        });
+        string localDbName = "TestDB_" + Guid.NewGuid().ToString();
+        var localWebFactory = TestHelpers.CreateSeededWebFactory(_factory, [new Account(2344, "John", "Doe")], localDbName);
 
         // And I have a single entry of meter reading data
         var csvDataBuilder = new StringBuilder();
@@ -129,29 +92,13 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
         TestHelpers.AssertMeterReading(readings[0], 2344, new DateTime(2019, 4, 8, 9, 24, 0), 0);
         TestHelpers.AssertMeterReading(readings[1], 2344, new DateTime(2019, 4, 22, 9, 24, 0), 1002);
     }
-    
+
     [Fact]
     public async Task SubmitMeterReadingInvalidCustomer()
     {
         // Given I have a customer account
-        string localDbName = string.Empty;
-        var localWebFactory = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(s =>
-            {
-                s.AddDbContext<MeterReadingsContext>(options =>
-                {
-                    localDbName = "TestDB_" + Guid.NewGuid().ToString();
-                    options.UseInMemoryDatabase(localDbName)
-                    .UseAsyncSeeding(async (context, _, camcellationToken) =>
-                    {
-
-                        (context as MeterReadingsContext)?.Accounts.Add(new Account(2344, "John", "Doe"));
-                        await context.SaveChangesAsync(camcellationToken);
-                    });
-                });
-            });
-        });
+        string localDbName = "TestDB_" + Guid.NewGuid().ToString();
+        var localWebFactory = TestHelpers.CreateSeededWebFactory(_factory, [new Account(2344, "John", "Doe")], localDbName);
 
         // And I have a single entry of meter reading data
         var csvDataBuilder = new StringBuilder();
@@ -178,4 +125,6 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
         TestHelpers.AssertMeterReading(readings[0], 2344, new DateTime(2019, 4, 8, 9, 24, 0), 0);
         TestHelpers.AssertMeterReading(readings[1], 2344, new DateTime(2019, 4, 22, 9, 24, 0), 1002);
     }
+    
+    //TODO: Add tests for duplicate entries, and other invalid data scenarios
 }

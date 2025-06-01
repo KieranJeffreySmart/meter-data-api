@@ -1,8 +1,7 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using readingsapi;
 
 namespace readingsapi_tests;
@@ -38,31 +37,48 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
     public async Task SubmitAcceptanceData()
     {
         // Given I have many customer accounts
-        var accountsData = await File.ReadAllTextAsync("./test_data/Test_Accounts.csv");
-        //TODO: seed accounts data into the database
+        string localDbName = "TestDB_" + Guid.NewGuid().ToString();
+        var localWebFactory = await TestHelpers.CreateSeededWebFactoryAsync(_factory, "./test_data/Test_Accounts.csv", localDbName);
 
         // And I have a collection of meter readings data
         var readingsData = await File.ReadAllTextAsync("./test_data/Meter_Reading.csv");
 
         // When I submit the data
-        var client = _factory.CreateClient();
-        var content = new StringContent(readingsData);
+        var client = localWebFactory.CreateClient();
+        var content = TestHelpers.CreateFakeMultiPartFormData(readingsData);
         var response = await client.PostAsync("/meter-reading-uploads", content);
 
         // Then I should be informed of the number of successful readings submitted
         response.EnsureSuccessStatusCode();
         var responseData = await response.Content.ReadAsStringAsync();
-        Assert.Contains("10", responseData); // TODO: Adjust based on actual valid data from file
+        Assert.Contains("9", responseData); // TODO: Adjust based on actual valid data from file
 
         // And I can see all the data was persisted
-        // Note: This step is not actusally part of the acceptance criteria and I could use flat files
+        // Note: This step is not part of the acceptance criteria and I could use flat files
         //       however the exercise requires that the data is persisted to a DB and so I have added this to the test
-        // TODO: Figure out the easiest way to get persisted data
+        DateTimeFormatInfo dtfi = new DateTimeFormatInfo
+            {
+                ShortDatePattern = "dd/MM/yyyy",
+                LongDatePattern = "dd/MM/yyyy HH:mm"
+            };
+
+        var records = TestHelpers.GetReadingsFromContext(localDbName).ToList();
+        
+        TestHelpers.AssertMeterReading(records[0], 1234, DateTime.Parse("12/05/2019 09:24", dtfi), 9787);
+        TestHelpers.AssertMeterReading(records[1], 1244, DateTime.Parse("25/05/2019 09:24", dtfi), 3478);
+        TestHelpers.AssertMeterReading(records[2], 1246, DateTime.Parse("25/05/2019 09:24", dtfi), 3455);
+        TestHelpers.AssertMeterReading(records[3], 1248, DateTime.Parse("26/05/2019 09:24", dtfi), 3467);
+        TestHelpers.AssertMeterReading(records[4], 2344, DateTime.Parse("22/04/2019 09:24", dtfi), 1002);
+        TestHelpers.AssertMeterReading(records[5], 2344, DateTime.Parse("22/04/2019 12:25", dtfi), 1002);
+        TestHelpers.AssertMeterReading(records[6], 2350, DateTime.Parse("22/04/2019 12:25", dtfi), 5684);
+        TestHelpers.AssertMeterReading(records[7], 2353, DateTime.Parse("22/04/2019 12:25", dtfi), 1212);
+        TestHelpers.AssertMeterReading(records[8], 8766, DateTime.Parse("22/04/2019 12:25", dtfi), 3440);
     }
 
     [Fact]
     public async Task SubmitEmptyData()
     {
+        // Note: This test is not part of the acceptance criteria but following the 0/1/many rule this is required
         // When I submit empty data
         var client = _factory.CreateClient();
         var content = new MultipartFormDataContent {  };
@@ -78,24 +94,8 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
     public async Task SubmitSingleValidReadingForSingleCustomer()
     {
         // Given I have a customer account
-        string localDbName = string.Empty;
-        var localWebFactory = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(s =>
-            {
-                s.AddDbContext<MeterReadingsContext>(options =>
-                {
-                    localDbName = "TestDB_" + Guid.NewGuid().ToString();
-                    options.UseInMemoryDatabase(localDbName)
-                    .UseAsyncSeeding(async (context, _, camcellationToken) =>
-                    {
-                        
-                        (context as MeterReadingsContext)?.Accounts.Add(new Account(2344, "John", "Doe"));
-                        await context.SaveChangesAsync(camcellationToken);
-                    });
-                });
-            });
-        });
+        string localDbName = "TestDB_" + Guid.NewGuid().ToString();
+        var localWebFactory = TestHelpers.CreateSeededWebFactory(_factory, [new Account(2344, "John", "Doe")], localDbName);
 
         // And I have a single entry of meter reading data
         var readingsData = "2344,22/04/2019 09:24,1002,";
@@ -118,31 +118,13 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
         var reading = readings.First();
         TestHelpers.AssertMeterReading(reading, 2344, new DateTime(2019, 4, 22, 9, 24, 0), 1002);
     }
-    
-    
 
     [Fact]
     public async Task SubmitMultipleUnorderedValidReadingForSingleCustomer()
     {
         // Given I have a customer account
-        string localDbName = string.Empty;
-        var localWebFactory = _factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(s =>
-            {
-                s.AddDbContext<MeterReadingsContext>(options =>
-                {
-                    localDbName = "TestDB_" + Guid.NewGuid().ToString();
-                    options.UseInMemoryDatabase(localDbName)
-                    .UseAsyncSeeding(async (context, _, camcellationToken) =>
-                    {
-                        
-                        (context as MeterReadingsContext)?.Accounts.Add(new Account(2344, "John", "Doe"));
-                        await context.SaveChangesAsync(camcellationToken);
-                    });
-                });
-            });
-        });
+        string localDbName = "TestDB_" + Guid.NewGuid().ToString();
+        var localWebFactory = TestHelpers.CreateSeededWebFactory(_factory, [new Account(2344, "John", "Doe")], localDbName);
 
         // And I have a single entry of meter reading data
         var csvDataBuilder = new StringBuilder();

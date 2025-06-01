@@ -19,7 +19,6 @@ public class Program
 
         builder.Services.AddScoped<MeterReadingsFileParser>();
 
-
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
@@ -35,6 +34,7 @@ public class Program
             await dbContext.Database.EnsureCreatedAsync();
             var recordCount = 0;
 
+            //TODO: Encapsulate and inject file management and database logic so it can be decoupled from the the http controller logic
             try
             {
                 var formCollection = await request.ReadFormAsync();
