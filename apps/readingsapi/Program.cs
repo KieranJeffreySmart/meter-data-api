@@ -1,7 +1,8 @@
 using System.Globalization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
+namespace readingsapi;
 
 public class Program
 {
@@ -17,6 +18,8 @@ public class Program
             options.UseInMemoryDatabase(Guid.NewGuid().ToString())
             );
 
+        builder.Services.AddScoped<MeterReadingsFileParser>();
+
 
         var app = builder.Build();
 
@@ -28,7 +31,7 @@ public class Program
 
         app.UseHttpsRedirection();
 
-        _ = app.MapPost("/meter-reading-uploads", async (HttpRequest request, [FromServices] MeterReadingsContext dbContext) =>
+        _ = app.MapPost("/meter-reading-uploads", async (HttpRequest request, [FromServices] MeterReadingsContext dbContext, [FromServices] MeterReadingsFileParser fileParser) =>
         {
             await dbContext.Database.EnsureCreatedAsync();
 
@@ -43,23 +46,8 @@ public class Program
 
                 foreach (var file in formCollection.Files)
                 {
-                    if (file.Length == 0)
+                    await foreach(var reading in fileParser.ParseAsync(file))
                     {
-                        continue; // Skip empty files
-                    }
-
-                    using var reader = new StreamReader(file.OpenReadStream());
-                    string? line;
-                    while ((line = await reader.ReadLineAsync()) != null)
-                    {
-                        var parts = line.Split(',');
-                        DateTimeFormatInfo dtfi = new DateTimeFormatInfo
-                        {
-                            ShortDatePattern = "dd/MM/yyyy",
-                            LongDatePattern = "dd/MM/yyyy HH:mm"
-                        };
-
-                        var reading = new Reading(Guid.NewGuid(), Convert.ToInt32(parts[0]), Convert.ToDateTime(parts[1], dtfi), Convert.ToInt32(parts[2]));
                         dbContext.Readings.Add(reading);
                     }
                 }
@@ -85,10 +73,41 @@ public class MeterReadingsContext : DbContext
     {
     }
 
+    override protected void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Account>().HasKey(a => a.AccountId);
+        modelBuilder.Entity<MeterReading>().HasKey(mr => mr.ReadingId);
+    }
+
     public DbSet<Account> Accounts { get; set; }
-    public DbSet<Reading> Readings { get; set; }
+    public DbSet<MeterReading> Readings { get; set; }
+}
+
+public class MeterReadingsFileParser
+{
+    public async IAsyncEnumerable<MeterReading> ParseAsync(IFormFile file)
+    {
+        if (file.Length == 0)
+        {
+            yield break; // Skip empty files
+        }
+
+        using var reader = new StreamReader(file.OpenReadStream());
+        string? line;
+        while ((line = await reader.ReadLineAsync()) != null)
+        {
+            var parts = line.Split(',');
+            DateTimeFormatInfo dtfi = new DateTimeFormatInfo
+            {
+                ShortDatePattern = "dd/MM/yyyy",
+                LongDatePattern = "dd/MM/yyyy HH:mm"
+            };
+
+            yield return new MeterReading(Guid.NewGuid(), Convert.ToInt32(parts[0]), Convert.ToDateTime(parts[1], dtfi), Convert.ToInt32(parts[2]));
+        }
+    }
 }
 
 public record Account(int AccountId, string FirstName, string LastName);
 
-public record Reading(Guid ReadingId, int AccountId, DateTime MeterReadingDateTime, int MeterReadValue);
+public record MeterReading(Guid ReadingId, int AccountId, DateTime MeterReadingDateTime, int MeterReadValue);
