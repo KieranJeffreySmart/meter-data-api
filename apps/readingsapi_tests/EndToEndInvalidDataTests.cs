@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using Microsoft.AspNetCore.Mvc.Testing;
 using readingsapi;
@@ -15,6 +16,21 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
     public EndToEndInvalidDataTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory;
+    }
+
+    [Fact]
+    public async Task SubmitEmptyFileData()
+    {
+        // Note: This test is not part of the acceptance criteria but following the 0/1/many rule this is required
+        // When I submit empty data
+        var client = _factory.CreateClient();
+        var content = TestHelpers.CreateFakeMultiPartFormData(string.Empty);
+        var response = await client.PostAsync("/meter-reading-uploads", content);
+
+        // Then no recordds should be processed
+        response.EnsureSuccessStatusCode();
+        var responseData = await response.Content.ReadAsStringAsync();
+        Assert.Equal("\"0\"", responseData);
     }
 
     [Theory]
