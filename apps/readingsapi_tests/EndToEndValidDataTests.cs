@@ -8,25 +8,6 @@ namespace readingsapi_tests;
 
 public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Program>>
 {
-    // As an Energy Company Account Manager, 
-    // I want to be able to load a CSV file of Customer Meter Readings 
-    // so that we can monitor their energy consumption and charge them accordingly
-
-    // Create the following endpoint:	
-    // 	POST => /meter-reading-uploads
-    // The endpoint should be able to process a CSV of meter readings. An example CSV file has been provided (Meter_reading.csv)
-    // Each entry in the CSV should be validated and if valid, stored in a DB.
-    // After processing, the number of successful/failed readings should be returned.
-
-    // Validation: 
-    // You should not be able to load the same entry twice
-    // A meter reading must be associated with an Account ID to be deemed valid
-    // Reading values should be in the format NNNNN
-
-    // NICE TO HAVE
-    // Create a client in the technology of your choosing to consume the API. You can use angular/react/whatever you like
-    // When an account has an existing read, ensure the new read isn’t older than the existing read
-
     WebApplicationFactory<Program> _factory;
     public EndToEndValidDataTests(WebApplicationFactory<Program> factory)
     {
@@ -51,7 +32,8 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
         // Then I should be informed of the number of successful readings submitted
         response.EnsureSuccessStatusCode();
         var responseData = await response.Content.ReadAsStringAsync();
-        Assert.Contains("9", responseData); // TODO: Adjust based on actual valid data from file
+        Assert.Equal("\"9\"", responseData);
+        // TODO: Assert the number of failed records is also returned
 
         // And I can see all the data was persisted
         // Note: This step is not part of the acceptance criteria and I could use flat files
