@@ -61,6 +61,8 @@ public class EndToEndTests: IClassFixture<WebApplicationFactory<Program>>
 
         // Then I should be informed my request was bad
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var responseData = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Bad Request: No data provided.", responseData);
     }
 
     [Fact]
