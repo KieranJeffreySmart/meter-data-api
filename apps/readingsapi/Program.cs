@@ -24,7 +24,48 @@ public class Program
         }
         else
         {
-            builder.Services.AddDbContext<MeterReadingsContext>(options => options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid}"));
+            var dbName = $"InMemDb_{Guid.NewGuid}";
+            builder.Services.AddDbContext<MeterReadingsContext>(options => options.UseInMemoryDatabase(dbName));
+
+            if (args.Length > 0 && string.Compare(args[0], "seed", StringComparison.OrdinalIgnoreCase) == 0)
+            {
+                var accounts = new List<Account>();
+                using var reader = new StreamReader(new FileStream("./seed_data/Test_Accounts.csv", FileMode.Open, FileAccess.Read));
+                string? line;
+                bool skipHeader = true;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    if (skipHeader)
+                    {
+                        skipHeader = false;
+                        continue;
+                    }
+
+                    var parts = line.Split(',');
+                    if (parts.Length < 2)
+                    {
+                        continue; // Skip invalid lines
+                    }
+
+                    int accountId = Convert.ToInt32(parts[0]);
+                    string firstName = parts[1];
+                    string lastName = parts.Length > 2 ? parts[2] : string.Empty;
+
+                    accounts.Add(new Account(accountId, firstName, lastName));
+                }
+
+                var context = new MeterReadingsContext(
+                    new DbContextOptionsBuilder<MeterReadingsContext>()
+                        .UseInMemoryDatabase(dbName)
+                        .UseSeeding((context, _) =>
+                            {
+                                (context as MeterReadingsContext)?.Accounts.AddRange(accounts);
+                                context.SaveChanges();
+                            })
+                        .Options);
+
+                context.Database.EnsureCreated();
+            }
         }
 
         builder.AddServiceDefaults();
