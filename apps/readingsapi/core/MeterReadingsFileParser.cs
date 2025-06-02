@@ -2,7 +2,12 @@ using System.Globalization;
 
 namespace readingsapi;
 
-public partial class MeterReadingsFileParser
+public interface IMeterReadingsFileParser
+{
+    IAsyncEnumerable<(bool err, NewMeterReadingDto record)> ParseAsync(Stream fileStream);
+}
+
+public partial class MeterReadingsFileParser : IMeterReadingsFileParser
 {
     private readonly IMeterReadingValidator _validator;
 

@@ -1,3 +1,5 @@
+
+namespace readingsapi;
 public interface IAccountsRepository
 {
     Task<bool> AccountExists(int accountId);

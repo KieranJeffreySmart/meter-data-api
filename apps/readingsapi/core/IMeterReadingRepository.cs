@@ -1,4 +1,5 @@
 
+namespace readingsapi;
 public interface IMeterReadingWriteRepository
 {
     Task Add(NewMeterReadingDto record);

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using readingsapi.adaptors;
+using readingsapi.logging;
 
 namespace readingsapi;
 
@@ -71,10 +72,47 @@ public class Program
         builder.AddServiceDefaults();
 
         builder.Services.AddScoped<MeterReadingsFileParser>();
-        builder.Services.AddScoped<IMeterReadingValidator, MeterReadingValidator>();
-        builder.Services.AddScoped<IAccountsRepository, AccountsRepository>();
-        builder.Services.AddScoped<IMeterReadingWriteRepository, MeterReadingRepository>();
-        builder.Services.AddScoped<IMeterReadingReadRepository, MeterReadingRepository>();
+        builder.Services.AddScoped<IMeterReadingsFileParser>(provider => {
+            var inner = provider.GetRequiredService<MeterReadingsFileParser>();
+            var logger = provider.GetRequiredService<ILogger<IMeterReadingsFileParser>>();
+            return new MeterReadingsFileParserWithLogging(inner, logger);
+        });
+        
+        builder.Services.AddScoped<MeterReadingValidator>();
+        builder.Services.AddScoped<IMeterReadingValidator>(provider => {
+            var inner = provider.GetRequiredService<MeterReadingValidator>();
+            var logger = provider.GetRequiredService<ILogger<IMeterReadingValidator>>();
+            return new MeterReadingValidatorWithLogging(inner, logger);
+        });        
+        
+        builder.Services.AddScoped<AccountsRepository>();
+        builder.Services.AddScoped<IAccountsRepository>(provider => {
+            var inner = provider.GetRequiredService<AccountsRepository>();
+            var logger = provider.GetRequiredService<ILogger<IAccountsRepository>>();
+            return new AccountsRepositoryWithLogging(inner, logger);
+        });
+ 
+        
+        builder.Services.AddScoped<MeterReadingRepository>();
+        builder.Services.AddScoped<IMeterReadingWriteRepository>(provider => {
+            var inner = provider.GetRequiredService<MeterReadingRepository>();
+            var logger = provider.GetRequiredService<ILogger<IMeterReadingWriteRepository>>();
+            return new MeterReadingWriteRepositoryWithLogging(inner, logger);
+        });
+
+        builder.Services.AddScoped<MeterReadingRepository>();
+        builder.Services.AddScoped<IMeterReadingReadRepository>(provider => {
+            var inner = provider.GetRequiredService<MeterReadingRepository>();
+            var logger = provider.GetRequiredService<ILogger<IMeterReadingReadRepository>>();
+            return new MeterReadingReadRepositoryWithLogging(inner, logger);
+        });
+        
+        builder.Services.AddScoped<MeterReadingCsvFileProcessor>();
+        builder.Services.AddScoped<IMeterReadingCsvFileProcessor>(provider => {
+            var inner = provider.GetRequiredService<MeterReadingCsvFileProcessor>();
+            var logger = provider.GetRequiredService<ILogger<IMeterReadingCsvFileProcessor>>();
+            return new MeterReadingCsvFileProcessorWithLogging(inner, logger);
+        });
 
         var app = builder.Build();
         
@@ -88,12 +126,8 @@ public class Program
 
         app.UseHttpsRedirection();
 
-        _ = app.MapPost(METER_READINGS_URI_PATH, async (HttpRequest request, [FromServices] IMeterReadingWriteRepository readingsRepo, [FromServices] MeterReadingsFileParser fileParser) =>
+        _ = app.MapPost(METER_READINGS_URI_PATH, async (HttpRequest request, [FromServices] IMeterReadingCsvFileProcessor fileProcessor) =>
         {
-            var successCount = 0;
-            var failCount = 0;
-
-            //TODO: Encapsulate and inject file management logic so it can be decoupled from the the http controller logic
             try
             {
                 var formCollection = await request.ReadFormAsync();
@@ -102,31 +136,13 @@ public class Program
                     return Results.BadRequest(BAD_REQUEST_MESSAGE);
                 }
 
-                foreach (var file in formCollection.Files)
-                {
-                    await foreach (var reading in fileParser.ParseAsync(file.OpenReadStream()))
-                    {
-                        if (reading.err)
-                        {
-                            // If the reading is invalid, skip it
-                            failCount++;
-                            continue;
-                        }
-
-                        await readingsRepo.Add(reading.record);
-                        successCount++;
-                    }
-                }
-
-                await readingsRepo.SaveAsync();
+                return Results.Ok(await fileProcessor.ProcessFiles(formCollection.Files.Select(f => f.OpenReadStream())));
             }
             catch (InvalidDataException ex)
             {
                 LogException(ex);
                 return Results.BadRequest(BAD_REQUEST_MESSAGE);
             }
-
-            return Results.Ok(new ProcessingResults(successCount, failCount));
         });
 
         app.Run();
@@ -137,5 +153,4 @@ public class Program
         Console.Error.WriteLine($"Error: {ex.Message}");
     }
 
-    private record ProcessingResults(int Succedded, int Failed);
 }
