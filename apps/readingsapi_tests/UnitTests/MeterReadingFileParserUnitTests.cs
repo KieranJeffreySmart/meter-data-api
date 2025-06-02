@@ -1,5 +1,4 @@
 using System.Text;
-using Microsoft.AspNetCore.Http;
 using readingsapi;
 
 namespace readingsapi_tests;

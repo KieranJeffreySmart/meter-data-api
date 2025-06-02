@@ -1,5 +1,3 @@
-using System.Diagnostics.Eventing.Reader;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using readingsapi.adaptors;
@@ -19,10 +17,17 @@ public class Program
         builder.Services.AddOpenApi();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+        var connectionType = Environment.GetEnvironmentVariable("DB_CONNECTION_TYPE");
+        if (connectionType == "postgresdb")
+        {
+            builder.AddNpgsqlDbContext<MeterReadingsContext>(connectionName: "postgresdb");
+        }
+        else
+        {
+            builder.Services.AddDbContext<MeterReadingsContext>(options => options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid}"));
+        }
 
         builder.AddServiceDefaults();
-
-        builder.AddNpgsqlDbContext<MeterReadingsContext>(connectionName: "postgresdb");
 
         builder.Services.AddScoped<MeterReadingsFileParser>();
         builder.Services.AddScoped<IAccountsRepository, AccountsRepository>();
