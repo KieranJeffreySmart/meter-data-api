@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Json;
 using System.Text;
 using Microsoft.AspNetCore.Mvc.Testing;
 using readingsapi;
@@ -31,9 +32,10 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
 
         // Then I should be informed of the number of successful readings submitted
         response.EnsureSuccessStatusCode();
-        var responseData = await response.Content.ReadAsStringAsync();
-        Assert.Equal("\"9\"", responseData);
-        // TODO: Assert the number of failed records is also returned
+        var responseData = await response.Content.ReadFromJsonAsync<ResponseDto>();
+        Assert.NotNull(responseData);
+        Assert.Equal(9, responseData.Succedded);
+        Assert.Equal(27, responseData.Failed);
 
         // And I can see all the data was persisted
         // Note: This step is not part of the acceptance criteria and I could use flat files
@@ -89,8 +91,10 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
 
         // Then I should be informed the reading was successfully submitted
         response.EnsureSuccessStatusCode();
-        var responseData = await response.Content.ReadAsStringAsync();
-        Assert.Equal("\"1\"", responseData);
+        var responseData = await response.Content.ReadFromJsonAsync<ResponseDto>();
+        Assert.NotNull(responseData);
+        Assert.Equal(1, responseData.Succedded);
+        Assert.Equal(0, responseData.Failed);
 
         // And I can see the reading was persisted
         Assert.NotNull(localDbName);
@@ -122,8 +126,10 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
 
         // Then I should be informed the reading was successfully submitted
         response.EnsureSuccessStatusCode();
-        var responseData = await response.Content.ReadAsStringAsync();
-        Assert.Equal("\"3\"", responseData);
+        var responseData = await response.Content.ReadFromJsonAsync<ResponseDto>();
+        Assert.NotNull(responseData);
+        Assert.Equal(3, responseData.Succedded);
+        Assert.Equal(0, responseData.Failed);
 
         // And I can see the reading was persisted
         Assert.NotNull(localDbName);
@@ -158,8 +164,10 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
 
         // Then I should be informed the reading was successfully submitted
         response.EnsureSuccessStatusCode();
-        var responseData = await response.Content.ReadAsStringAsync();
-        Assert.Equal("\"3\"", responseData);
+        var responseData = await response.Content.ReadFromJsonAsync<ResponseDto>();
+        Assert.NotNull(responseData);
+        Assert.Equal(3, responseData.Succedded);
+        Assert.Equal(0, responseData.Failed);
 
         // And I can see the reading was persisted
         Assert.NotNull(localDbName);

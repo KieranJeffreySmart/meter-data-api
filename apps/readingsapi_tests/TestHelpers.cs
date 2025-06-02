@@ -5,6 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using readingsapi;
 using Microsoft.Extensions.DependencyInjection;
 
+
+internal class ResponseDto
+{
+    public int Succedded { get; set; }
+    public int Failed { get; set; }
+}
+
 internal class TestHelpers
 {
     internal static IEnumerable<MeterReading> GetReadingsFromContext(string dbName)

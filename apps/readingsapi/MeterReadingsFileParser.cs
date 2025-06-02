@@ -15,10 +15,16 @@ public partial class MeterReadingsFileParser
 
         using var reader = new StreamReader(file.OpenReadStream());
 
-        // TODO: Consider skipping the header line if present
         string? line;
+        var isFirstLine = true;
         while ((line = await reader.ReadLineAsync()) != null)
         {
+            if (isFirstLine && LineIsHeader(line))
+            {
+                isFirstLine = false;
+                continue; // Skip header line
+            }
+
             var parts = line.Split(',');
             // TODO: Validate the number of parts
             // TODO: Encapsulate and inject the validation logic
@@ -47,6 +53,16 @@ public partial class MeterReadingsFileParser
                 }
             }
         }
+    }
+
+    private static bool LineIsHeader(string line)
+    {
+        var parts = line.Split(',');
+
+        return parts.Length >= 3 &&
+                parts[0].Trim().Equals("AccountId", StringComparison.OrdinalIgnoreCase) &&
+                parts[1].Trim().Equals("MeterReadingDateTime", StringComparison.OrdinalIgnoreCase) &&
+                parts[2].Trim().Equals("MeterReadValue", StringComparison.OrdinalIgnoreCase);
     }
 
     [GeneratedRegex("^\\d{4}$")]

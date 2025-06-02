@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -32,7 +33,8 @@ public class Program
         _ = app.MapPost("/meter-reading-uploads", async (HttpRequest request, [FromServices] MeterReadingsContext dbContext, [FromServices] MeterReadingsFileParser fileParser) =>
         {
             await dbContext.Database.EnsureCreatedAsync();
-            var recordCount = 0;
+            var successCount = 0;
+            var failCount = 0;
 
             //TODO: Encapsulate and inject file management and database logic so it can be decoupled from the the http controller logic
             try
@@ -40,7 +42,6 @@ public class Program
                 var formCollection = await request.ReadFormAsync();
                 if (formCollection == null || formCollection.Files.Count == 0)
                 {
-                    // If no files are uploaded, return a Bad Request response
                     return Results.BadRequest("Bad Request: Invalid data provided.");
                 }
 
@@ -51,17 +52,33 @@ public class Program
                         if (reading.err)
                         {
                             // If the reading is invalid, skip it
+                            failCount++;
                             continue;
                         }
 
-                        if (dbContext.Accounts.Find(reading.record.AccountId) == null)
+                        if (await dbContext.Accounts.FindAsync(reading.record.AccountId) == null)
                         {
-                            // If the account does not exist, skip the reading
+                            // If the account does not exist, skip it
+                            failCount++;
+                            continue;
+                        }
+
+                        if (dbContext.Readings.Local.Any(r => r.AccountId == reading.record.AccountId && r.MeterReadingDateTime == reading.record.MeterReadingDateTime))
+                        {
+                            // If the reading already exists locally, skip it
+                            failCount++;
+                            continue;
+                        }
+
+                        if (await dbContext.Readings.AnyAsync(r => r.AccountId == reading.record.AccountId && r.MeterReadingDateTime == reading.record.MeterReadingDateTime))
+                        {
+                            // If the reading already exists in the database, skip it
+                            failCount++;
                             continue;
                         }
 
                         dbContext.Readings.Add(reading.record);
-                        recordCount++;
+                        successCount++;
                     }
                 }
 
@@ -73,11 +90,12 @@ public class Program
                 return Results.BadRequest("Bad Request: Invalid data provided.");
             }
 
-            return Results.Ok(recordCount.ToString());
+            return Results.Ok(new ProcessingResults(successCount, failCount));
         })
         .WithName("MeterReadingUploads");
 
         app.Run();
     }
-}
 
+    private record ProcessingResults(int Succedded, int Failed);
+}
