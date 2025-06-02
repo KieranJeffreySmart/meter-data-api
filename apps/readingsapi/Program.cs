@@ -32,7 +32,8 @@ public class Program
         builder.Services.AddScoped<MeterReadingsFileParser>();
         builder.Services.AddScoped<IMeterReadingValidator, MeterReadingValidator>();
         builder.Services.AddScoped<IAccountsRepository, AccountsRepository>();
-        builder.Services.AddScoped<IMeterReadingRepository, MeterReadingRepository>();
+        builder.Services.AddScoped<IMeterReadingWriteRepository, MeterReadingRepository>();
+        builder.Services.AddScoped<IMeterReadingReadRepository, MeterReadingRepository>();
 
         var app = builder.Build();
         
@@ -46,7 +47,7 @@ public class Program
 
         app.UseHttpsRedirection();
 
-        _ = app.MapPost(METER_READINGS_URI_PATH, async (HttpRequest request, [FromServices] IAccountsRepository accountsRepo, [FromServices] IMeterReadingRepository readingsRepo, [FromServices] MeterReadingsFileParser fileParser) =>
+        _ = app.MapPost(METER_READINGS_URI_PATH, async (HttpRequest request, [FromServices] IMeterReadingWriteRepository readingsRepo, [FromServices] MeterReadingsFileParser fileParser) =>
         {
             var successCount = 0;
             var failCount = 0;
@@ -67,24 +68,6 @@ public class Program
                         if (reading.err)
                         {
                             // If the reading is invalid, skip it
-                            failCount++;
-                            continue;
-                        }
-
-                        var record = reading.record;
-
-                        var accountExists = await accountsRepo.AccountExists(record.AccountId);
-
-                        if (!accountExists)
-                        {
-                            // If the account does not exist, skip it
-                            failCount++;
-                            continue;
-                        }
-
-                        if (await readingsRepo.IsDuplicate(record))
-                        {
-                            // If the reading is a duplicate, skip it
                             failCount++;
                             continue;
                         }

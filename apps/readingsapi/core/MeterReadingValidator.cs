@@ -5,8 +5,18 @@ namespace readingsapi;
 
 public partial class MeterReadingValidator : IMeterReadingValidator
 {
+    readonly IAccountsRepository _accountsRepo;
+    readonly IMeterReadingReadRepository _meterReadingReadRepo;
+
+    public MeterReadingValidator(IAccountsRepository accountsRepo, IMeterReadingReadRepository meterReadingReadRepo)
+    {
+        _accountsRepo = accountsRepo;
+        _meterReadingReadRepo = meterReadingReadRepo;
+    }
+
     public async Task<bool> IsValidCsvAsync(string csvData)
     {
+        // Validate missing data
         if (string.IsNullOrWhiteSpace(csvData))
         {
             return false;
@@ -25,13 +35,15 @@ public partial class MeterReadingValidator : IMeterReadingValidator
             return false;
         }
 
+        // Validate meter reading value
         var r = MeterReadingValueRegex();
 
         if (!r.IsMatch(parts[2]))
         {
             return false;
         }
-        
+
+        // Validate meter reading date time
         DateTimeFormatInfo dtfi = new DateTimeFormatInfo
         {
             ShortDatePattern = "dd/MM/yyyy",
@@ -39,6 +51,19 @@ public partial class MeterReadingValidator : IMeterReadingValidator
         };
 
         if (!DateTime.TryParse(parts[1], dtfi, DateTimeStyles.None, out var dateTime))
+        {
+            return false;
+        }
+
+        // Validate account number
+        if (!int.TryParse(parts[0], out var accountNumber)
+            || accountNumber <= 0
+            || !await _accountsRepo.AccountExists(accountNumber))
+        {
+            return false;
+        }
+
+        if (await _meterReadingReadRepo.Exists(accountNumber, dateTime))
         {
             return false;
         }

@@ -1,10 +1,13 @@
 
-public interface IMeterReadingRepository
+public interface IMeterReadingWriteRepository
 {
-    Task<bool> IsDuplicate(NewMeterReadingDto record);
-
     Task Add(NewMeterReadingDto record);
     Task SaveAsync();
+}
+
+public interface IMeterReadingReadRepository
+{
+    Task<bool> Exists(int accountId, DateTime meterReadingDateTime);
 }
 
 

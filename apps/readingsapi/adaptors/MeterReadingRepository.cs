@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace readingsapi.adaptors;
 
-public class MeterReadingRepository : IMeterReadingRepository
+public class MeterReadingRepository : IMeterReadingWriteRepository, IMeterReadingReadRepository
 {
     private readonly MeterReadingsContext _context;
 
@@ -16,14 +16,14 @@ public class MeterReadingRepository : IMeterReadingRepository
         await _context.Readings.AddAsync(new MeterReading(Guid.NewGuid(), record.AccountId, record.MeterReadingDateTime, record.MeterReadValue));
     }
 
-    public async Task<bool> IsDuplicate(NewMeterReadingDto record)
+    public async Task<bool> Exists(int accountId, DateTime meterReadingDateTime)
     {
-        if (_context.Readings.Local.Any(r => r.AccountId == record.AccountId && r.MeterReadingDateTime == record.MeterReadingDateTime))
+        if (_context.Readings.Local.Any(r => r.AccountId == accountId && r.MeterReadingDateTime == meterReadingDateTime))
         {
             return true;
         }
 
-        if (await _context.Readings.AnyAsync(r => r.AccountId == record.AccountId && r.MeterReadingDateTime == record.MeterReadingDateTime))
+        if (await _context.Readings.AnyAsync(r => r.AccountId == accountId && r.MeterReadingDateTime == meterReadingDateTime))
         {
             return true;
         }
