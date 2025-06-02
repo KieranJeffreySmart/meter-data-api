@@ -30,6 +30,7 @@ public class Program
         builder.AddServiceDefaults();
 
         builder.Services.AddScoped<MeterReadingsFileParser>();
+        builder.Services.AddScoped<IMeterReadingValidator, MeterReadingValidator>();
         builder.Services.AddScoped<IAccountsRepository, AccountsRepository>();
         builder.Services.AddScoped<IMeterReadingRepository, MeterReadingRepository>();
 
