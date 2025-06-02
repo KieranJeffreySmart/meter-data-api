@@ -16,6 +16,18 @@ From the root folder:
 dotnet test
 ```
 
+## Run Meter Readins API
+From the application folder `apps/readingsapi/`:
+``` bash
+dotnet run
+```
+
+## Run Meter Readins API with seeded account data
+From the application folder `apps/readingsapi/`:
+``` bash
+dotnet run seed
+```
+
 ## Publish Distributable
 From the root folder:
 #### Local OS:
