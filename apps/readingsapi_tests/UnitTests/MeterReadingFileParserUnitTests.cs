@@ -10,12 +10,12 @@ public class MeterReadingFileParserUnitTests
     public async Task ParseEmptyFile()
     {
         // Given an empty file
-        var file = new FormFile(new MemoryStream(), 0, 0, "name", "empty.txt");
+        var contentStream = new MemoryStream();
 
         // When I parse the file
         var parser = new MeterReadingsFileParser();
-        var records = new List<MeterReading>();
-        await foreach (var (err, record) in parser.ParseAsync(file))
+        var records = new List<NewMeterReadingDto>();
+        await foreach (var (err, record) in parser.ParseAsync(contentStream))
         {
             records.Add(record);
         }
@@ -30,12 +30,11 @@ public class MeterReadingFileParserUnitTests
         // Given a file with one record        
         var readingsData = "2344,22/04/2019 09:24,1002,";
         var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(readingsData));
-        var file = new FormFile(contentStream, 0, contentStream.Length, "name", "empty.txt");
 
         // When I parse the file
         var parser = new MeterReadingsFileParser();
-        var records = new List<MeterReading>();
-        await foreach (var (err, record) in parser.ParseAsync(file))
+        var records = new List<NewMeterReadingDto>();
+        await foreach (var (err, record) in parser.ParseAsync(contentStream))
         {
             records.Add(record);
         }
@@ -54,12 +53,11 @@ public class MeterReadingFileParserUnitTests
         csvDataBuilder.AppendLine("2233,22/04/2019 12:25,0323,");
         var readingsData = csvDataBuilder.ToString();
         var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(readingsData));
-        var file = new FormFile(contentStream, 0, contentStream.Length, "name", "empty.txt");
 
         // When I parse the file
         var parser = new MeterReadingsFileParser();
-        var records = new List<MeterReading>();
-        await foreach (var (err, record) in parser.ParseAsync(file))
+        var records = new List<NewMeterReadingDto>();
+        await foreach (var (err, record) in parser.ParseAsync(contentStream))
         {
             records.Add(record);
         }
@@ -87,13 +85,12 @@ public class MeterReadingFileParserUnitTests
         csvDataBuilder.AppendLine("2344,08/04/2019 09:24,0000,");
         var readingsData = csvDataBuilder.ToString();
         var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(readingsData));
-        var file = new FormFile(contentStream, 0, contentStream.Length, "name", "empty.txt");
 
         // When I parse the file
         var parser = new MeterReadingsFileParser();
-        var records = new List<MeterReading>();
+        var records = new List<NewMeterReadingDto>();
         var numberOfInvalidLines = 0;
-        await foreach (var (err, record) in parser.ParseAsync(file))
+        await foreach (var (err, record) in parser.ParseAsync(contentStream))
         {
             if (err)
             {
@@ -123,13 +120,12 @@ public class MeterReadingFileParserUnitTests
         csvDataBuilder.AppendLine("2344,08/04/2019 09:24,0000,");
         var readingsData = csvDataBuilder.ToString();
         var contentStream = new MemoryStream(Encoding.UTF8.GetBytes(readingsData));
-        var file = new FormFile(contentStream, 0, contentStream.Length, "name", "empty.txt");
 
         // When I parse the file
         var parser = new MeterReadingsFileParser();
-        var records = new List<MeterReading>();
+        var records = new List<NewMeterReadingDto>();
         var numberOfInvalidLines = 0;
-        await foreach (var (err, record) in parser.ParseAsync(file))
+        await foreach (var (err, record) in parser.ParseAsync(contentStream))
         {
             if (err)
             {

@@ -5,7 +5,7 @@ using readingsapi;
 
 namespace readingsapi_tests;
 
-public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Program>>
+public class InvalidDataTests : IClassFixture<WebApplicationFactory<Program>>
 {
     // Validation: 
     // You should not be able to load the same entry twice
@@ -13,7 +13,7 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
     // Reading values should be in the format NNNNN
 
     WebApplicationFactory<Program> _factory;
-    public EndToEndInvalidDataTests(WebApplicationFactory<Program> factory)
+    public InvalidDataTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }
@@ -47,7 +47,6 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
     {
         // Given I have a customer account
         string localDbName = "TestDB_" + Guid.NewGuid().ToString();
-        var localWebFactory = TestHelpers.CreateSeededWebFactory(_factory, [new Account(2344, "John", "Doe")], localDbName);
 
         // And I have a single entry of meter reading data
         var csvDataBuilder = new StringBuilder();
@@ -57,7 +56,7 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
         var readingsData = csvDataBuilder.ToString();
 
         // When I submit the data
-        var client = localWebFactory.CreateClient();
+        var client = await TestHelpers.CreateClientWithSeededData(_factory, [new Account(2344, "John", "Doe")], localDbName);
         var content = TestHelpers.CreateFakeMultiPartFormData(readingsData);
         var response = await client.PostAsync("/meter-reading-uploads", content);
 
@@ -85,7 +84,6 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
     {
         // Given I have a customer account
         string localDbName = "TestDB_" + Guid.NewGuid().ToString();
-        var localWebFactory = TestHelpers.CreateSeededWebFactory(_factory, [new Account(2344, "John", "Doe")], localDbName);
 
         // And I have a single entry of meter reading data
         var csvDataBuilder = new StringBuilder();
@@ -95,7 +93,7 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
         var readingsData = csvDataBuilder.ToString();
 
         // When I submit the data
-        var client = localWebFactory.CreateClient();
+        var client = await TestHelpers.CreateClientWithSeededData(_factory, [new Account(2344, "John", "Doe")], localDbName);
         var content = TestHelpers.CreateFakeMultiPartFormData(readingsData);
         var response = await client.PostAsync("/meter-reading-uploads", content);
 
@@ -120,7 +118,6 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
     {
         // Given I have a customer account
         string localDbName = "TestDB_" + Guid.NewGuid().ToString();
-        var localWebFactory = TestHelpers.CreateSeededWebFactory(_factory, [new Account(2344, "John", "Doe")], localDbName);
 
         // And I have a single entry of meter reading data
         var csvDataBuilder = new StringBuilder();
@@ -130,7 +127,7 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
         var readingsData = csvDataBuilder.ToString();
 
         // When I submit the data
-        var client = localWebFactory.CreateClient();
+        var client = await TestHelpers.CreateClientWithSeededData(_factory, [new Account(2344, "John", "Doe")], localDbName);
         var content = TestHelpers.CreateFakeMultiPartFormData(readingsData);
         var response = await client.PostAsync("/meter-reading-uploads", content);
 
@@ -157,7 +154,6 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
     {
         // Given I have a customer account
         string localDbName = "TestDB_" + Guid.NewGuid().ToString();
-        var localWebFactory = TestHelpers.CreateSeededWebFactory(_factory, [new Account(2344, "John", "Doe")], localDbName);
 
         // And I have a single entry of meter reading data
         var csvDataBuilder = new StringBuilder();
@@ -169,7 +165,7 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
         var readingsData = csvDataBuilder.ToString();
 
         // When I submit the data
-        var client = localWebFactory.CreateClient();
+        var client = await TestHelpers.CreateClientWithSeededData(_factory, [new Account(2344, "John", "Doe")], localDbName);
         var content = TestHelpers.CreateFakeMultiPartFormData(readingsData);
         var response = await client.PostAsync("/meter-reading-uploads", content);
 
@@ -190,5 +186,5 @@ public class EndToEndInvalidDataTests : IClassFixture<WebApplicationFactory<Prog
         TestHelpers.AssertMeterReading(readings[2], 2344, new DateTime(2019, 4, 22, 12, 25, 0), 1004);
     }
     
-    //TODO: Add tests for duplicate entries, and other invalid data scenarios
+    //TODO: Add tests for other invalid data scenarios
 }

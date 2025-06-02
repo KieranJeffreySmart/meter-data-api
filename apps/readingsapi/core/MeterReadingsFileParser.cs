@@ -6,14 +6,14 @@ namespace readingsapi;
 public partial class MeterReadingsFileParser
 {
     // TODO: Consider changing this signature to use a Stream instead of IFormFile
-    public async IAsyncEnumerable<(bool err, MeterReading record)> ParseAsync(IFormFile file)
+    public async IAsyncEnumerable<(bool err, NewMeterReadingDto record)> ParseAsync(Stream fileStream)
     {
-        if (file.Length == 0)
+        if (fileStream.Length == 0)
         {
             yield break; // Skip empty files
         }
 
-        using var reader = new StreamReader(file.OpenReadStream());
+        using var reader = new StreamReader(fileStream);
 
         string? line;
         var isFirstLine = true;
@@ -39,17 +39,17 @@ public partial class MeterReadingsFileParser
 
             if (!r.IsMatch(parts[2]))
             {
-                yield return (true, new MeterReading(Guid.Empty, -1, DateTime.MinValue, -1)); // Skip invalid meter reading values
+                yield return (true, new NewMeterReadingDto(-1, DateTime.MinValue, -1)); // Skip invalid meter reading values
             }
             else
             {
                 if (DateTime.TryParse(parts[1], dtfi, DateTimeStyles.None, out var dateTime))
                 {
-                    yield return (false, new MeterReading(Guid.NewGuid(), Convert.ToInt32(parts[0]), dateTime, Convert.ToInt32(parts[2])));
+                    yield return (false, new NewMeterReadingDto(Convert.ToInt32(parts[0]), dateTime, Convert.ToInt32(parts[2])));
                 }
                 else
                 {
-                    yield return (true, new MeterReading(Guid.Empty, -1, DateTime.MinValue, -1)); // Skip invalid date formats
+                    yield return (true, new NewMeterReadingDto(-1, DateTime.MinValue, -1)); // Skip invalid date formats
                 }
             }
         }

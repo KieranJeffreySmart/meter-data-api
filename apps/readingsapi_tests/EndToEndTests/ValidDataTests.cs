@@ -7,10 +7,10 @@ using readingsapi;
 
 namespace readingsapi_tests;
 
-public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Program>>
+public class ValidDataTests : IClassFixture<WebApplicationFactory<Program>>
 {
     WebApplicationFactory<Program> _factory;
-    public EndToEndValidDataTests(WebApplicationFactory<Program> factory)
+    public ValidDataTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }
@@ -20,13 +20,12 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
     {
         // Given I have many customer accounts
         string localDbName = "TestDB_" + Guid.NewGuid().ToString();
-        var localWebFactory = await TestHelpers.CreateSeededWebFactoryAsync(_factory, "./test_data/Test_Accounts.csv", localDbName);
 
         // And I have a collection of meter readings data
         var readingsData = await File.ReadAllTextAsync("./test_data/Meter_Reading.csv");
 
         // When I submit the data
-        var client = localWebFactory.CreateClient();
+        var client = await TestHelpers.CreateClientWithSeededData(_factory, "./test_data/Test_Accounts.csv", localDbName);
         var content = TestHelpers.CreateFakeMultiPartFormData(readingsData);
         var response = await client.PostAsync("/meter-reading-uploads", content);
 
@@ -79,13 +78,12 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
     {
         // Given I have a customer account
         string localDbName = "TestDB_" + Guid.NewGuid().ToString();
-        var localWebFactory = TestHelpers.CreateSeededWebFactory(_factory, [new Account(2344, "John", "Doe")], localDbName);
 
         // And I have a single entry of meter reading data
         var readingsData = "2344,22/04/2019 09:24,1002,";
 
         // When I submit the data
-        var client = localWebFactory.CreateClient();
+        var client = await TestHelpers.CreateClientWithSeededData(_factory, [new Account(2344, "John", "Doe")], localDbName);
         var content = TestHelpers.CreateFakeMultiPartFormData(readingsData);
         var response = await client.PostAsync("/meter-reading-uploads", content);
 
@@ -110,7 +108,6 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
     {
         // Given I have a customer account
         string localDbName = "TestDB_" + Guid.NewGuid().ToString();
-        var localWebFactory = TestHelpers.CreateSeededWebFactory(_factory, [new Account(2344, "John", "Doe")], localDbName);
 
         // And I have a single entry of meter reading data
         var csvDataBuilder = new StringBuilder();
@@ -120,7 +117,7 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
         var readingsData = csvDataBuilder.ToString();
 
         // When I submit the data
-        var client = localWebFactory.CreateClient();
+        var client = await TestHelpers.CreateClientWithSeededData(_factory, [new Account(2344, "John", "Doe")], localDbName);
         var content = TestHelpers.CreateFakeMultiPartFormData(readingsData);
         var response = await client.PostAsync("/meter-reading-uploads", content);
 
@@ -146,7 +143,6 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
     {
         // Given I have a customer account
         string localDbName = "TestDB_" + Guid.NewGuid().ToString();
-        var localWebFactory = TestHelpers.CreateSeededWebFactory(_factory, [new Account(2344, "John", "Doe")], localDbName);
 
         // And I have a single entry of meter reading data
         var csvDataBuilder = new StringBuilder();
@@ -155,7 +151,7 @@ public class EndToEndValidDataTests : IClassFixture<WebApplicationFactory<Progra
         var readingsData = csvDataBuilder.ToString();
 
         // When I submit the data
-        var client = localWebFactory.CreateClient();
+        var client = await TestHelpers.CreateClientWithSeededData(_factory, [new Account(2344, "John", "Doe")], localDbName);
         var content = TestHelpers.CreateFakeMultiPartFormData(readingsData);
         
         ByteArrayContent byteContent = new(Encoding.UTF8.GetBytes("2344,08/04/2019 09:24,0000,"));

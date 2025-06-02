@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace readingsapi;
+namespace readingsapi.adaptors;
 
 public class MeterReadingsContext : DbContext
 {
@@ -17,7 +17,3 @@ public class MeterReadingsContext : DbContext
     public DbSet<Account> Accounts { get; set; }
     public DbSet<MeterReading> Readings { get; set; }
 }
-
-public record Account(int AccountId, string FirstName, string LastName);
-
-public record MeterReading(Guid ReadingId, int AccountId, DateTime MeterReadingDateTime, int MeterReadValue);

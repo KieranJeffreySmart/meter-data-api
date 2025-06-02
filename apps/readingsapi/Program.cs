@@ -1,12 +1,13 @@
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using readingsapi.adaptors;
 
 namespace readingsapi;
 
 public class Program
 {
-    private static void Main(string[] args)
+    public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +20,8 @@ public class Program
             );
 
         builder.Services.AddScoped<MeterReadingsFileParser>();
+        builder.Services.AddScoped<IAccountsRepository, AccountsRepository>();
+        builder.Services.AddScoped<IMeterReadingRepository, MeterReadingRepository>();
 
         var app = builder.Build();
 
@@ -30,13 +33,12 @@ public class Program
 
         app.UseHttpsRedirection();
 
-        _ = app.MapPost("/meter-reading-uploads", async (HttpRequest request, [FromServices] MeterReadingsContext dbContext, [FromServices] MeterReadingsFileParser fileParser) =>
+        _ = app.MapPost("/meter-reading-uploads", async (HttpRequest request, [FromServices] IAccountsRepository accountsRepo, [FromServices] IMeterReadingRepository readingsRepo, [FromServices] MeterReadingsFileParser fileParser) =>
         {
-            await dbContext.Database.EnsureCreatedAsync();
             var successCount = 0;
             var failCount = 0;
 
-            //TODO: Encapsulate and inject file management and database logic so it can be decoupled from the the http controller logic
+            //TODO: Encapsulate and inject file management logic so it can be decoupled from the the http controller logic
             try
             {
                 var formCollection = await request.ReadFormAsync();
@@ -47,7 +49,7 @@ public class Program
 
                 foreach (var file in formCollection.Files)
                 {
-                    await foreach (var reading in fileParser.ParseAsync(file))
+                    await foreach (var reading in fileParser.ParseAsync(file.OpenReadStream()))
                     {
                         if (reading.err)
                         {
@@ -56,33 +58,30 @@ public class Program
                             continue;
                         }
 
-                        if (await dbContext.Accounts.FindAsync(reading.record.AccountId) == null)
+                        var record = reading.record;
+
+                        var accountExists = await accountsRepo.AccountExists(record.AccountId);
+
+                        if (!accountExists)
                         {
                             // If the account does not exist, skip it
                             failCount++;
                             continue;
                         }
 
-                        if (dbContext.Readings.Local.Any(r => r.AccountId == reading.record.AccountId && r.MeterReadingDateTime == reading.record.MeterReadingDateTime))
+                        if (await readingsRepo.IsDuplicate(record))
                         {
-                            // If the reading already exists locally, skip it
+                            // If the reading is a duplicate, skip it
                             failCount++;
                             continue;
                         }
 
-                        if (await dbContext.Readings.AnyAsync(r => r.AccountId == reading.record.AccountId && r.MeterReadingDateTime == reading.record.MeterReadingDateTime))
-                        {
-                            // If the reading already exists in the database, skip it
-                            failCount++;
-                            continue;
-                        }
-
-                        dbContext.Readings.Add(reading.record);
+                        await readingsRepo.Add(reading.record);
                         successCount++;
                     }
                 }
 
-                await dbContext.SaveChangesAsync();
+                await readingsRepo.SaveAsync();
             }
             catch (InvalidDataException ex)
             {
