@@ -1,3 +1,4 @@
+using System.Diagnostics.Eventing.Reader;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,33 +8,39 @@ namespace readingsapi;
 
 public class Program
 {
+    private static readonly string BAD_REQUEST_MESSAGE = "Bad Request: Invalid data provided.";
+    private static readonly string METER_READINGS_URI_PATH = "/meter-reading-uploads";
+
+
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // Add services to the container.
-        // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
-        builder.Services.AddDbContext<MeterReadingsContext>(
-            options =>
-            options.UseInMemoryDatabase(Guid.NewGuid().ToString())
-            );
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen();
+
+        builder.AddServiceDefaults();
+
+        builder.AddNpgsqlDbContext<MeterReadingsContext>(connectionName: "postgresdb");
 
         builder.Services.AddScoped<MeterReadingsFileParser>();
         builder.Services.AddScoped<IAccountsRepository, AccountsRepository>();
         builder.Services.AddScoped<IMeterReadingRepository, MeterReadingRepository>();
 
         var app = builder.Build();
-
+        
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
+            app.UseSwagger();
+            app.UseSwaggerUI();
             app.MapOpenApi();
         }
 
         app.UseHttpsRedirection();
 
-        _ = app.MapPost("/meter-reading-uploads", async (HttpRequest request, [FromServices] IAccountsRepository accountsRepo, [FromServices] IMeterReadingRepository readingsRepo, [FromServices] MeterReadingsFileParser fileParser) =>
+        _ = app.MapPost(METER_READINGS_URI_PATH, async (HttpRequest request, [FromServices] IAccountsRepository accountsRepo, [FromServices] IMeterReadingRepository readingsRepo, [FromServices] MeterReadingsFileParser fileParser) =>
         {
             var successCount = 0;
             var failCount = 0;
@@ -44,7 +51,7 @@ public class Program
                 var formCollection = await request.ReadFormAsync();
                 if (formCollection == null || formCollection.Files.Count == 0)
                 {
-                    return Results.BadRequest("Bad Request: Invalid data provided.");
+                    return Results.BadRequest(BAD_REQUEST_MESSAGE);
                 }
 
                 foreach (var file in formCollection.Files)
@@ -85,15 +92,19 @@ public class Program
             }
             catch (InvalidDataException ex)
             {
-                Console.WriteLine($"Invalid data encountered: {ex.Message}");
-                return Results.BadRequest("Bad Request: Invalid data provided.");
+                LogException(ex);
+                return Results.BadRequest(BAD_REQUEST_MESSAGE);
             }
 
             return Results.Ok(new ProcessingResults(successCount, failCount));
-        })
-        .WithName("MeterReadingUploads");
+        });
 
         app.Run();
+    }
+
+    private static void LogException(Exception ex)
+    {
+        Console.Error.WriteLine($"Error: {ex.Message}");
     }
 
     private record ProcessingResults(int Succedded, int Failed);
