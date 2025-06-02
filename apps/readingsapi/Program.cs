@@ -30,92 +30,63 @@ public class Program
 
             if (args.Length > 0 && string.Compare(args[0], "seed", StringComparison.OrdinalIgnoreCase) == 0)
             {
-                var accounts = new List<Account>();
-                using var reader = new StreamReader(new FileStream("./seed_data/Test_Accounts.csv", FileMode.Open, FileAccess.Read));
-                string? line;
-                bool skipHeader = true;
-                while ((line = reader.ReadLine()) != null)
-                {
-                    if (skipHeader)
-                    {
-                        skipHeader = false;
-                        continue;
-                    }
-
-                    var parts = line.Split(',');
-                    if (parts.Length < 2)
-                    {
-                        continue; // Skip invalid lines
-                    }
-
-                    int accountId = Convert.ToInt32(parts[0]);
-                    string firstName = parts[1];
-                    string lastName = parts.Length > 2 ? parts[2] : string.Empty;
-
-                    accounts.Add(new Account(accountId, firstName, lastName));
-                }
-
-                var context = new MeterReadingsContext(
-                    new DbContextOptionsBuilder<MeterReadingsContext>()
-                        .UseInMemoryDatabase(dbName)
-                        .UseSeeding((context, _) =>
-                            {
-                                (context as MeterReadingsContext)?.Accounts.AddRange(accounts);
-                                context.SaveChanges();
-                            })
-                        .Options);
-
-                context.Database.EnsureCreated();
+                SeedData(dbName);
             }
         }
 
         builder.AddServiceDefaults();
 
         builder.Services.AddScoped<MeterReadingsFileParser>();
-        builder.Services.AddScoped<IMeterReadingsFileParser>(provider => {
+        builder.Services.AddScoped<IMeterReadingsFileParser>(provider =>
+        {
             var inner = provider.GetRequiredService<MeterReadingsFileParser>();
             var logger = provider.GetRequiredService<ILogger<IMeterReadingsFileParser>>();
             return new MeterReadingsFileParserWithLogging(inner, logger);
         });
-        
+
         builder.Services.AddScoped<MeterReadingValidator>();
-        builder.Services.AddScoped<IMeterReadingValidator>(provider => {
+        builder.Services.AddScoped<IMeterReadingValidator>(provider =>
+        {
             var inner = provider.GetRequiredService<MeterReadingValidator>();
             var logger = provider.GetRequiredService<ILogger<IMeterReadingValidator>>();
             return new MeterReadingValidatorWithLogging(inner, logger);
-        });        
-        
+        });
+
         builder.Services.AddScoped<AccountsRepository>();
-        builder.Services.AddScoped<IAccountsRepository>(provider => {
+        builder.Services.AddScoped<IAccountsRepository>(provider =>
+        {
             var inner = provider.GetRequiredService<AccountsRepository>();
             var logger = provider.GetRequiredService<ILogger<IAccountsRepository>>();
             return new AccountsRepositoryWithLogging(inner, logger);
         });
- 
-        
+
+
         builder.Services.AddScoped<MeterReadingRepository>();
-        builder.Services.AddScoped<IMeterReadingWriteRepository>(provider => {
+        builder.Services.AddScoped<IMeterReadingWriteRepository>(provider =>
+        {
             var inner = provider.GetRequiredService<MeterReadingRepository>();
             var logger = provider.GetRequiredService<ILogger<IMeterReadingWriteRepository>>();
             return new MeterReadingWriteRepositoryWithLogging(inner, logger);
         });
 
         builder.Services.AddScoped<MeterReadingRepository>();
-        builder.Services.AddScoped<IMeterReadingReadRepository>(provider => {
+        builder.Services.AddScoped<IMeterReadingReadRepository>(provider =>
+        {
             var inner = provider.GetRequiredService<MeterReadingRepository>();
             var logger = provider.GetRequiredService<ILogger<IMeterReadingReadRepository>>();
             return new MeterReadingReadRepositoryWithLogging(inner, logger);
         });
-        
+
         builder.Services.AddScoped<MeterReadingCsvFileProcessor>();
-        builder.Services.AddScoped<IMeterReadingCsvFileProcessor>(provider => {
+        builder.Services.AddScoped<IMeterReadingCsvFileProcessor>(provider =>
+        {
             var inner = provider.GetRequiredService<MeterReadingCsvFileProcessor>();
             var logger = provider.GetRequiredService<ILogger<IMeterReadingCsvFileProcessor>>();
             return new MeterReadingCsvFileProcessorWithLogging(inner, logger);
         });
 
         var app = builder.Build();
-        
+
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
@@ -151,6 +122,46 @@ public class Program
     private static void LogException(Exception ex)
     {
         Console.Error.WriteLine($"Error: {ex.Message}");
+    }
+
+    private static void SeedData(string dbName)
+    {
+        var accounts = new List<Account>();
+        using var reader = new StreamReader(new FileStream("./seed_data/Test_Accounts.csv", FileMode.Open, FileAccess.Read));
+        string? line;
+        bool skipHeader = true;
+        while ((line = reader.ReadLine()) != null)
+        {
+            if (skipHeader)
+            {
+                skipHeader = false;
+                continue;
+            }
+
+            var parts = line.Split(',');
+            if (parts.Length < 2)
+            {
+                continue; // Skip invalid lines
+            }
+
+            int accountId = Convert.ToInt32(parts[0]);
+            string firstName = parts[1];
+            string lastName = parts.Length > 2 ? parts[2] : string.Empty;
+
+            accounts.Add(new Account(accountId, firstName, lastName));
+        }
+
+        var context = new MeterReadingsContext(
+            new DbContextOptionsBuilder<MeterReadingsContext>()
+                .UseInMemoryDatabase(dbName)
+                .UseSeeding((context, _) =>
+                    {
+                        (context as MeterReadingsContext)?.Accounts.AddRange(accounts);
+                        context.SaveChanges();
+                    })
+                .Options);
+
+        context.Database.EnsureCreated();
     }
 
 }
