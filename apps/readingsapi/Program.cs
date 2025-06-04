@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using readingsapi.adaptors;
 using readingsapi.logging;
 
@@ -35,55 +36,19 @@ public class Program
         }
 
         builder.AddServiceDefaults();
-
         builder.Services.AddScoped<MeterReadingsFileParser>();
-        builder.Services.AddScoped<IMeterReadingsFileParser>(provider =>
-        {
-            var inner = provider.GetRequiredService<MeterReadingsFileParser>();
-            var logger = provider.GetRequiredService<ILogger<IMeterReadingsFileParser>>();
-            return new MeterReadingsFileParserWithLogging(inner, logger);
-        });
-
         builder.Services.AddScoped<MeterReadingValidator>();
-        builder.Services.AddScoped<IMeterReadingValidator>(provider =>
-        {
-            var inner = provider.GetRequiredService<MeterReadingValidator>();
-            var logger = provider.GetRequiredService<ILogger<IMeterReadingValidator>>();
-            return new MeterReadingValidatorWithLogging(inner, logger);
-        });
-
         builder.Services.AddScoped<AccountsRepository>();
-        builder.Services.AddScoped<IAccountsRepository>(provider =>
-        {
-            var inner = provider.GetRequiredService<AccountsRepository>();
-            var logger = provider.GetRequiredService<ILogger<IAccountsRepository>>();
-            return new AccountsRepositoryWithLogging(inner, logger);
-        });
-
-
         builder.Services.AddScoped<MeterReadingRepository>();
-        builder.Services.AddScoped<IMeterReadingWriteRepository>(provider =>
-        {
-            var inner = provider.GetRequiredService<MeterReadingRepository>();
-            var logger = provider.GetRequiredService<ILogger<IMeterReadingWriteRepository>>();
-            return new MeterReadingWriteRepositoryWithLogging(inner, logger);
-        });
-
         builder.Services.AddScoped<MeterReadingRepository>();
-        builder.Services.AddScoped<IMeterReadingReadRepository>(provider =>
-        {
-            var inner = provider.GetRequiredService<MeterReadingRepository>();
-            var logger = provider.GetRequiredService<ILogger<IMeterReadingReadRepository>>();
-            return new MeterReadingReadRepositoryWithLogging(inner, logger);
-        });
-
         builder.Services.AddScoped<MeterReadingCsvFileProcessor>();
-        builder.Services.AddScoped<IMeterReadingCsvFileProcessor>(provider =>
-        {
-            var inner = provider.GetRequiredService<MeterReadingCsvFileProcessor>();
-            var logger = provider.GetRequiredService<ILogger<IMeterReadingCsvFileProcessor>>();
-            return new MeterReadingCsvFileProcessorWithLogging(inner, logger);
-        });
+
+        builder.Services.AddLoggingDecorator<IMeterReadingsFileParser, MeterReadingsFileParser>((inner, logger) => new MeterReadingsFileParserWithLogging(inner, logger));
+        builder.Services.AddLoggingDecorator<IMeterReadingValidator, MeterReadingValidator>((inner, logger) => new MeterReadingValidatorWithLogging(inner, logger));
+        builder.Services.AddLoggingDecorator<IAccountsRepository, AccountsRepository>((inner, logger) => new AccountsRepositoryWithLogging(inner, logger));
+        builder.Services.AddLoggingDecorator<IMeterReadingWriteRepository, MeterReadingRepository>((inner, logger) => new MeterReadingWriteRepositoryWithLogging(inner, logger));
+        builder.Services.AddLoggingDecorator<IMeterReadingReadRepository, MeterReadingRepository>((inner, logger) => new MeterReadingReadRepositoryWithLogging(inner, logger));
+        builder.Services.AddLoggingDecorator<IMeterReadingCsvFileProcessor, MeterReadingCsvFileProcessor>((inner, logger) => new MeterReadingCsvFileProcessorWithLogging(inner, logger));
 
         var app = builder.Build();
 
