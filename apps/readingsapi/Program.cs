@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -12,27 +13,46 @@ public class Program
     private static readonly string METER_READINGS_URI_PATH = "/meter-reading-uploads";
 
 
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
         builder.Services.AddOpenApi();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+
+        //TODO: Refactor to use .net options and import environment variables
         var connectionType = Environment.GetEnvironmentVariable("DB_CONNECTION_TYPE");
-        if (connectionType == "postgresdb")
+        Action<DbContextOptionsBuilder>? configureDbContext = (DbContextOptionsBuilder options) =>
+        {
+            if (string.Compare(connectionType, "postgresdb", StringComparison.OrdinalIgnoreCase) != 0)
+            {
+                Console.WriteLine("using inmemory");
+                options.UseInMemoryDatabase($"InMemDb_{Guid.NewGuid()}");
+            }
+
+            if (args.Length > 0 && string.Compare(args[0], "seed", StringComparison.OrdinalIgnoreCase) == 0)
+            {
+                Console.WriteLine("configure seeding");
+                options.UseAsyncSeeding(async (context, _, cancellationToken) =>
+                {
+                    if (context is MeterReadingsContext mrContext)
+                    {
+                        Console.WriteLine("Seeding database with initial data...");
+                       //  await SeedData(mrContext);
+                        Console.WriteLine("Seeding complete.");
+                    }
+                });
+            }
+        };
+
+        if (string.Compare(connectionType, "postgresdb", StringComparison.OrdinalIgnoreCase) == 0)
         {
             builder.AddNpgsqlDbContext<MeterReadingsContext>(connectionName: "postgresdb");
         }
         else
         {
-            var dbName = $"InMemDb_{Guid.NewGuid}";
-            builder.Services.AddDbContext<MeterReadingsContext>(options => options.UseInMemoryDatabase(dbName));
-
-            if (args.Length > 0 && string.Compare(args[0], "seed", StringComparison.OrdinalIgnoreCase) == 0)
-            {
-                SeedData(dbName);
-            }
+            builder.Services.AddDbContext<MeterReadingsContext>(configureDbContext);
         }
 
         builder.AddServiceDefaults();
@@ -55,6 +75,8 @@ public class Program
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
+            Console.WriteLine("configure for development");
+            await app.ConfigureDbContextAsync();
             app.UseSwagger();
             app.UseSwaggerUI();
             app.MapOpenApi();
@@ -89,13 +111,44 @@ public class Program
         Console.Error.WriteLine($"Error: {ex.Message}");
     }
 
-    private static void SeedData(string dbName)
+    private static async Task SeedData(MeterReadingsContext context)
     {
+        const string DEFAULT_SEED_DATA = @"AccountId,FirstName,LastName
+2344,Tommy,Test
+2233,Barry,Test
+8766,Sally,Test
+2345,Jerry,Test
+2346,Ollie,Test
+2347,Tara,Test
+2348,Tammy,Test
+2349,Simon,Test
+2350,Colin,Test
+2351,Gladys,Test
+2352,Greg,Test
+2353,Tony,Test
+2355,Arthur,Test
+2356,Craig,Test
+6776,Laura,Test
+4534,JOSH,TEST
+1234,Freya,Test
+1239,Noddy,Test
+1240,Archie,Test
+1241,Lara,Test
+1242,Tim,Test
+1243,Graham,Test
+1244,Tony,Test
+1245,Neville,Test
+1246,Jo,Test
+1247,Jim,Test
+1248,Pam,Test
+";
+
+        //TODO: Refactor this into something testable
         var accounts = new List<Account>();
-        using var reader = new StreamReader(new FileStream("./seed_data/Test_Accounts.csv", FileMode.Open, FileAccess.Read));
+        using var reader = new StreamReader(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(DEFAULT_SEED_DATA)));
         string? line;
         bool skipHeader = true;
-        while ((line = reader.ReadLine()) != null)
+        while ((line = await reader.ReadLineAsync()) != null)
         {
             if (skipHeader)
             {
@@ -116,17 +169,36 @@ public class Program
             accounts.Add(new Account(accountId, firstName, lastName));
         }
 
-        var context = new MeterReadingsContext(
-            new DbContextOptionsBuilder<MeterReadingsContext>()
-                .UseInMemoryDatabase(dbName)
-                .UseSeeding((context, _) =>
-                    {
-                        (context as MeterReadingsContext)?.Accounts.AddRange(accounts);
-                        context.SaveChanges();
-                    })
-                .Options);
+        Console.WriteLine($"Seeding {accounts.Count} accounts into the database...");
 
-        context.Database.EnsureCreated();
+        await context.Accounts.AddRangeAsync(accounts);
+        await context.SaveChangesAsync();
     }
+}
 
+
+public static class WebAppDatbaseExtensions
+{
+    public static async Task ConfigureDbContextAsync(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<MeterReadingsContext>();
+        Console.WriteLine("Configuring database context...");
+
+        var createStrategy = context.Database.CreateExecutionStrategy();
+        await createStrategy.ExecuteAsync(async () => await context.Database.EnsureCreatedAsync());
+
+        var strategy = context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            if (context.Database.IsRelational())
+            {
+                Console.WriteLine("Migrating database...");
+                await using var transaction = await context.Database.BeginTransactionAsync();
+                await context.Database.MigrateAsync();
+                await transaction.CommitAsync();
+                Console.WriteLine("Finished Migrating database.");
+            }
+        });
+    }
 }
