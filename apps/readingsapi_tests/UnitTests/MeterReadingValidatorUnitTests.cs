@@ -1,7 +1,5 @@
-using System.Text;
 using Moq;
 using readingsapi;
-using readingsapi.adaptors;
 
 namespace readingsapi_tests;
 

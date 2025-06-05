@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using System.Text;
-using Microsoft.AspNetCore.Mvc.Testing;
 using readingsapi;
 
 namespace readingsapi_tests;
