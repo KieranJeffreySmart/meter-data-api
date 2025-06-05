@@ -63,8 +63,9 @@ public partial class MeterReadingValidator : IMeterReadingValidator
             return false;
         }
 
-        if (await _meterReadingReadRepo.Exists(accountNumber, dateTime))
+        if (await _meterReadingReadRepo.Exists(accountNumber, dateTime.ToUniversalTime()))
         {
+            // A reading already exists for this account and date time
             return false;
         }
 

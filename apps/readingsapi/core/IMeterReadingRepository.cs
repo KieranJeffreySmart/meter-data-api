@@ -12,6 +12,20 @@ public interface IMeterReadingReadRepository
 }
 
 
-public record MeterReading(Guid ReadingId, int AccountId, DateTime MeterReadingDateTime, int MeterReadValue);
+public record MeterReading
+{
+    public Guid ReadingId { get; init; }
+    public int AccountId { get; init; }
+    public DateTime MeterReadingDateTime { get; init; }
+    public int MeterReadValue { get; init; }
+
+    public MeterReading(Guid readingId, int accountId, DateTime meterReadingDateTime, int meterReadValue)
+    {
+        ReadingId = readingId;
+        AccountId = accountId;
+        MeterReadingDateTime = meterReadingDateTime.ToUniversalTime();
+        MeterReadValue = meterReadValue;
+    }
+}
 
 public record NewMeterReadingDto(int AccountId, DateTime MeterReadingDateTime, int MeterReadValue);

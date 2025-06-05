@@ -11,7 +11,8 @@ var postgresdb = postgres.AddDatabase("readingsdb");
 builder.AddProject<Projects.readingsapi>("readingsApi")
     .WithExternalHttpEndpoints()
     .WithReference(postgresdb);
-    
+
+// TOT: Get this working. Currently the readingsAPI port seems to have a conflict with this job.
 // builder.AddProject<Projects.readingsapi>("readingsApiSeedDataJob")
 //     .WithReference(postgresdb)
 //     .WithEnvironment("TASK_NAME", "seed");
