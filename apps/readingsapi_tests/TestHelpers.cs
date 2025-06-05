@@ -73,8 +73,7 @@ internal class TestHelpers
                 {
                     options.UseInMemoryDatabase(localDbName);
                 });
-            });
-            
+            });            
         });
     }
 
