@@ -20,7 +20,7 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        //TODO: Refactor to use .net options and import a config object from environment variables
+        //TODO: Refactor to use options and import a config object from environment variables
         var connectionType = Environment.GetEnvironmentVariable("DB_CONNECTION_TYPE");
         var connectionName = Environment.GetEnvironmentVariable("DB_CONNECTION_NAME") ?? "readingsdb";
 
@@ -60,7 +60,6 @@ public class Program
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
-            Console.WriteLine("configure for development");
             await app.ConfigureDbContextAsync();
             app.UseSwagger();
             app.UseSwaggerUI();
@@ -83,17 +82,13 @@ public class Program
             }
             catch (InvalidDataException ex)
             {
-                LogException(ex);
+                // TODO: Replace this with a default error handler in the controller pipeline
+                Console.Error.WriteLine($"Error: {ex.Message}");
                 return Results.BadRequest(BAD_REQUEST_MESSAGE);
             }
         });
 
         app.Run();
-    }
-
-    private static void LogException(Exception ex)
-    {
-        Console.Error.WriteLine($"Error: {ex.Message}");
     }
 }
 
@@ -108,15 +103,9 @@ public static class WebAppDatbaseExtensions
             var createStrategy = dbContext.Database.CreateExecutionStrategy();
             await createStrategy.ExecuteAsync(async () =>
             {
-                Console.WriteLine("Ensuring database exists...");
                 if (!await dbCreator.ExistsAsync())
                 {
-                    Console.WriteLine("Database does not exist, creating...");
                     await dbCreator.CreateAsync();
-                }
-                else
-                {
-                    Console.WriteLine("Database already exists.");
                 }
             });
         }
@@ -203,7 +192,6 @@ public static class WebAppDatbaseExtensions
     {
         using var scope = app.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<MeterReadingsContext>();
-        Console.WriteLine("Configuring database context...");
 
         await EnsureDatabaseAsync(context);
 
@@ -212,9 +200,7 @@ public static class WebAppDatbaseExtensions
         {
             if (context.Database.IsRelational())
             {
-                Console.WriteLine("Migrating database...");
                 await context.Database.MigrateAsync();                
-                Console.WriteLine("Finished Migrating database.");
             }
         });
     }
