@@ -10,7 +10,10 @@ var postgresdb = postgres.AddDatabase("readingsdb");
 
 builder.AddProject<Projects.readingsapi>("readingsApi")
     .WithExternalHttpEndpoints()
-    .WithReference(postgresdb)
-    .WithEnvironment("DB_CONNECTION_TYPE", "postgres");
+    .WithReference(postgresdb);
+    
+// builder.AddProject<Projects.readingsapi>("readingsApiSeedDataJob")
+//     .WithReference(postgresdb)
+//     .WithEnvironment("TASK_NAME", "seed");
 
 builder.Build().Run();
