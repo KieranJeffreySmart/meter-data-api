@@ -2,7 +2,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.EntityFrameworkCore.Storage;
 using readingsapi.adaptors;
 using readingsapi.logging;
@@ -14,7 +13,6 @@ public class Program
     private static readonly string BAD_REQUEST_MESSAGE = "Bad Request: Invalid data provided.";
     private static readonly string METER_READINGS_URI_PATH = "/meter-reading-uploads";
 
-
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -23,9 +21,9 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        //TODO: Refactor to use .net options and import environment variables
+        //TODO: Refactor to use .net options and import a config object from environment variables
         var connectionType = Environment.GetEnvironmentVariable("DB_CONNECTION_TYPE");
-        var connectionName = Environment.GetEnvironmentVariable("DB_CONNECTION_NAME");
+        var connectionName = Environment.GetEnvironmentVariable("DB_CONNECTION_NAME") ?? "readingsdb";
 
         if (string.Compare(connectionType, "InMemory", StringComparison.OrdinalIgnoreCase) == 0 && !string.IsNullOrWhiteSpace(connectionName))
         {
@@ -40,7 +38,7 @@ public class Program
         }
         else
         {
-            builder.AddNpgsqlDbContext<MeterReadingsContext>(connectionName: "readingsdb");
+            builder.AddNpgsqlDbContext<MeterReadingsContext>(connectionName: connectionName);
         }
 
         builder.AddServiceDefaults();
@@ -98,7 +96,6 @@ public class Program
     {
         Console.Error.WriteLine($"Error: {ex.Message}");
     }
-
 }
 
 
