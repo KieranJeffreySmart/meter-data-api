@@ -5,15 +5,15 @@ using readingsapi;
 
 namespace readingsapi_tests;
 
-public class InvalidDataTests : IClassFixture<WebApplicationFactory<Program>>
+public class InvalidDataTests : IClassFixture<CustomWebApplicationFactory<Program>>
 {
     // Validation: 
     // You should not be able to load the same entry twice
     // A meter reading must be associated with an Account ID to be deemed valid
     // Reading values should be in the format NNNNN
 
-    WebApplicationFactory<Program> _factory;
-    public InvalidDataTests(WebApplicationFactory<Program> factory)
+    CustomWebApplicationFactory<Program> _factory;
+    public InvalidDataTests(CustomWebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }

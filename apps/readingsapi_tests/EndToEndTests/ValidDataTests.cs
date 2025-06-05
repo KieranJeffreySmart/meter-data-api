@@ -7,10 +7,10 @@ using readingsapi;
 
 namespace readingsapi_tests;
 
-public class ValidDataTests : IClassFixture<WebApplicationFactory<Program>>
+public class ValidDataTests : IClassFixture<CustomWebApplicationFactory<Program>>
 {
-    WebApplicationFactory<Program> _factory;
-    public ValidDataTests(WebApplicationFactory<Program> factory)
+    CustomWebApplicationFactory<Program> _factory;
+    public ValidDataTests(CustomWebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }

@@ -66,6 +66,7 @@ internal class TestHelpers
     {
         return factory.WithWebHostBuilder(builder =>
         {
+            Environment.SetEnvironmentVariable("DB_CONNECTION_TYPE", "InMemory");
             builder.ConfigureServices(s =>
             {
                 s.AddDbContext<MeterReadingsContext>(options =>
@@ -73,6 +74,7 @@ internal class TestHelpers
                     options.UseInMemoryDatabase(localDbName);
                 });
             });
+            
         });
     }
 
