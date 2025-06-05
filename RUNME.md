@@ -16,16 +16,24 @@ From the root folder:
 dotnet test
 ```
 
-## Run Meter Readins API
+## Run Meter Readings API Standalone
 From the application folder `apps/readingsapi/`:
 ``` bash
 dotnet run
 ```
 
-## Run Meter Readins API with seeded account data
-From the application folder `apps/readingsapi/`:
+## Run Meter Readings API with Aspire
+From the application folder `apps/readingsapi.AppHost/`:
 ``` bash
-dotnet run seed
+dotnet run
+```
+
+## Database Configuration
+By default the application will start expecting a connection string with the name `readingsdb` to a postgres databse
+To use an In Memory databse, set the following environment variables:
+``` bash
+DB_CONNECTION_TYPE = "InMemory"
+DB_CONNECTION_NAME = "MyInMemoryDB" # optional
 ```
 
 ## Publish Distributable

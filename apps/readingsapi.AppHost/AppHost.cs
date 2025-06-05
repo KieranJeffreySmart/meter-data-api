@@ -1,10 +1,16 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var postgres = builder.AddPostgres("postgres");
-var postgresdb = postgres.AddDatabase("postgresdb");
+// TODO: Get passwords from a vault or secure store
+// var postgressPassword = builder.AddParameter("PostgresPassword", secret: true);
+// var postgres = builder.AddPostgres("postgres", password: postgressPassword)
+var postgres = builder.AddPostgres("postgres")
+    .WithDataVolume();
 
-builder.AddProject<Projects.readingsapi>("readingsapi")
+var postgresdb = postgres.AddDatabase("readingsdb");
+
+builder.AddProject<Projects.readingsapi>("readingsApi")
     .WithExternalHttpEndpoints()
-    .WithReference(postgresdb);
+    .WithReference(postgresdb)
+    .WithEnvironment("DB_CONNECTION_TYPE", "postgres");
 
 builder.Build().Run();

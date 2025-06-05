@@ -2,15 +2,14 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using Microsoft.AspNetCore.Mvc.Testing;
 using readingsapi;
 
 namespace readingsapi_tests;
 
-public class ValidDataTests : IClassFixture<WebApplicationFactory<Program>>
+public class ValidDataTests : IClassFixture<CustomWebApplicationFactory<Program>>
 {
-    WebApplicationFactory<Program> _factory;
-    public ValidDataTests(WebApplicationFactory<Program> factory)
+    CustomWebApplicationFactory<Program> _factory;
+    public ValidDataTests(CustomWebApplicationFactory<Program> factory)
     {
         _factory = factory;
     }
